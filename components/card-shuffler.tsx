@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Loader2, Settings } from "lucide-react"
+import { ExternalLink, Loader2 } from "lucide-react"
 import type { CardImage } from "@/lib/types"
 import { getCards } from "@/lib/storage"
 import Image from "next/image"
