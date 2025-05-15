@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trash2, ArrowLeft, ImagePlus, LinkIcon, Type, Edit, X, Check, AlertCircle } from "lucide-react"
+import { Trash2, ArrowLeft, ImagePlus, LinkIcon, Type, Edit, X, Check, AlertCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { CardImage } from "@/lib/types"
 import { getCards, addCard, deleteCard, updateCard, clearAllCards, compressImage } from "@/lib/storage"
 import Image from "next/image"
+
 export default function ManagePage() {
   const [cards, setCards] = useState<CardImage[]>([])
   const [imageUrl, setImageUrl] = useState("")
@@ -21,21 +22,40 @@ export default function ManagePage() {
   const [imageName, setImageName] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingCards, setIsLoadingCards] = useState(true)
   const [editingCard, setEditingCard] = useState<CardImage | null>(null)
   const [editImageUrl, setEditImageUrl] = useState("")
   const [editImageLink, setEditImageLink] = useState("")
   const [editImageName, setEditImageName] = useState("")
   const [editFile, setEditFile] = useState<File | null>(null)
-  const [storageError, setStorageError] = useState<string | null>(null)
+  const [apiError, setApiError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const editFileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
-    // Load cards from localStorage
-    const loadedCards = getCards()
-    setCards(loadedCards)
+    // Load cards from API
+    loadCards()
   }, [])
+
+  const loadCards = async () => {
+    setIsLoadingCards(true)
+    setApiError(null)
+    try {
+      const loadedCards = await getCards()
+      setCards(loadedCards)
+    } catch (error) {
+      console.error("Error loading cards:", error)
+      setApiError("Failed to load cards. Please try again later.")
+      toast({
+        title: "Error loading cards",
+        description: "There was a problem loading your cards. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingCards(false)
+    }
+  }
 
   const handleAddCard = async () => {
     if ((!imageUrl && !file) || !imageLink) {
@@ -48,7 +68,7 @@ export default function ManagePage() {
     }
 
     setIsLoading(true)
-    setStorageError(null)
+    setApiError(null)
 
     try {
       let finalImageUrl = imageUrl
@@ -80,7 +100,7 @@ export default function ManagePage() {
         link: imageLink,
       }
 
-      const updatedCards = await addCard(newCard)
+      const updatedCards = await addCard(newCard as Omit<CardImage, "id" | "createdAt">)
 
       if (updatedCards) {
         setCards(updatedCards)
@@ -90,10 +110,10 @@ export default function ManagePage() {
           description: "Your card has been added successfully",
         })
       } else {
-        setStorageError("Failed to save card. Storage quota may be exceeded.")
+        setApiError("Failed to save card. Server error occurred.")
         toast({
-          title: "Storage error",
-          description: "Failed to save card. Try using smaller images or removing some existing cards.",
+          title: "Server error",
+          description: "Failed to save card. Please try again later.",
           variant: "destructive",
         })
       }
@@ -138,15 +158,24 @@ export default function ManagePage() {
 
   const handleClearAllCards = async () => {
     if (confirm("Are you sure you want to delete all cards? This cannot be undone.")) {
-      const success = clearAllCards()
+      try {
+        const success = await clearAllCards()
 
-      if (success) {
-        setCards([])
-        toast({
-          title: "All cards deleted",
-          description: "All cards have been removed successfully",
-        })
-      } else {
+        if (success) {
+          setCards([])
+          toast({
+            title: "All cards deleted",
+            description: "All cards have been removed successfully",
+          })
+        } else {
+          toast({
+            title: "Error clearing cards",
+            description: "There was a problem clearing the cards. Please try again.",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("Error clearing cards:", error)
         toast({
           title: "Error clearing cards",
           description: "There was a problem clearing the cards. Please try again.",
@@ -157,14 +186,23 @@ export default function ManagePage() {
   }
 
   const openEditDialog = (card: CardImage) => {
-    setEditingCard(card)
-    setEditImageName(card.name)
-    setEditImageUrl(card.imageUrl)
-    setEditImageLink(card.link)
-    setEditFile(null)
+    if (!card || !card._id) {
+      toast({
+        title: "Error",
+        description: "Invalid card data",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setEditingCard(card);
+    setEditImageName(card.name);
+    setEditImageUrl(card.imageUrl);
+    setEditImageLink(card.link);
+    setEditFile(null);
 
     if (editFileInputRef.current) {
-      editFileInputRef.current.value = ""
+      editFileInputRef.current.value = "";
     }
   }
 
@@ -177,7 +215,14 @@ export default function ManagePage() {
   }
 
   const handleUpdateCard = async () => {
-    if (!editingCard) return
+    if (!editingCard || !editingCard._id) {
+      toast({
+        title: "Error updating card",
+        description: "Invalid card ID",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if ((!editImageUrl && !editFile) || !editImageLink) {
       toast({
@@ -189,7 +234,7 @@ export default function ManagePage() {
     }
 
     setIsLoading(true)
-    setStorageError(null)
+    setApiError(null)
 
     try {
       let finalImageUrl = editImageUrl
@@ -221,7 +266,7 @@ export default function ManagePage() {
         link: editImageLink,
       }
 
-      const updatedCards = await updateCard(editingCard.id, updatedCardData)
+      const updatedCards = await updateCard(editingCard._id, updatedCardData)
 
       if (updatedCards) {
         setCards(updatedCards)
@@ -231,10 +276,10 @@ export default function ManagePage() {
           description: "Your card has been updated successfully",
         })
       } else {
-        setStorageError("Failed to update card. Storage quota may be exceeded.")
+        setApiError("Failed to update card. Server error occurred.")
         toast({
-          title: "Storage error",
-          description: "Failed to update card. Try using smaller images or removing some existing cards.",
+          title: "Server error",
+          description: "Failed to update card. Please try again later.",
           variant: "destructive",
         })
       }
@@ -308,10 +353,10 @@ export default function ManagePage() {
         </Button>
       </div>
 
-      {storageError && (
+      {apiError && (
         <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{storageError}</AlertDescription>
+          <AlertDescription>{apiError}</AlertDescription>
         </Alert>
       )}
 
@@ -373,29 +418,41 @@ export default function ManagePage() {
           </CardContent>
           <CardFooter>
             <Button onClick={handleAddCard} disabled={isLoading} className="w-full">
-              {isLoading ? "Adding..." : "Add Card"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...
+                </>
+              ) : (
+                "Add Card"
+              )}
             </Button>
           </CardFooter>
         </Card>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Current Cards ({cards.length})</h2>
-            {cards.length > 0 && (
+            <h2 className="text-xl font-semibold">
+              Current Cards {isLoadingCards ? "" : `(${cards.length})`}
+            </h2>
+            {cards.length > 0 && !isLoadingCards && (
               <Button variant="outline" size="sm" onClick={handleClearAllCards}>
                 Clear All
               </Button>
             )}
           </div>
 
-          {cards.length === 0 ? (
+          {isLoadingCards ? (
+            <div className="flex justify-center items-center p-12 border rounded-lg border-dashed">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : cards.length === 0 ? (
             <div className="text-center p-8 border rounded-lg border-dashed">
               <p className="text-muted-foreground">No cards added yet. Add your first card!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto p-1">
               {cards.map((card) => (
-                <Card key={card.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <Card key={card._id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                   <div className="relative aspect-video bg-muted">
                     <Image
                       src={card.imageUrl || "/placeholder.svg"}
@@ -434,7 +491,7 @@ export default function ManagePage() {
                           variant="destructive"
                           size="icon"
                           className="flex-shrink-0 h-8 w-8"
-                          onClick={() => handleDeleteCard(card.id)}
+                          onClick={() => handleDeleteCard(card._id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -516,7 +573,9 @@ export default function ManagePage() {
             </Button>
             <Button onClick={handleUpdateCard} disabled={isLoading} className="gap-1">
               {isLoading ? (
-                "Updating..."
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...
+                </>
               ) : (
                 <>
                   <Check className="h-4 w-4" /> Save Changes

@@ -2,26 +2,25 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { ExternalLink } from "lucide-react"
+import { ExternalLink, Loader2, Settings } from "lucide-react"
 import type { CardImage } from "@/lib/types"
 import { getCards } from "@/lib/storage"
 import Image from "next/image"
+import Link from "next/link"
+
 export default function CardShuffler() {
   const [cards, setCards] = useState<CardImage[]>([])
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
   const [isShuffling, setIsShuffling] = useState(false)
   const [showLink, setShowLink] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const shuffleIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const shuffleHistoryRef = useRef<number[]>([])
 
   useEffect(() => {
-    // Load cards from localStorage
-    const loadedCards = getCards()
-    setCards(loadedCards)
-
-    if (loadedCards.length > 0) {
-      setCurrentCardIndex(0)
-    }
+    // Load cards from API
+    loadCards()
 
     // Cleanup on unmount
     return () => {
@@ -30,6 +29,25 @@ export default function CardShuffler() {
       }
     }
   }, [])
+
+  const loadCards = async () => {
+    setIsLoading(true)
+    setError(null)
+    
+    try {
+      const loadedCards = await getCards()
+      setCards(loadedCards)
+      
+      if (loadedCards.length > 0) {
+        setCurrentCardIndex(0)
+      }
+    } catch (error) {
+      console.error("Error loading cards:", error)
+      setError("Failed to load cards. Please try again later.")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const startShuffling = () => {
     if (cards.length < 2) {
@@ -45,7 +63,7 @@ export default function CardShuffler() {
       clearInterval(shuffleIntervalRef.current)
     }
 
-    // Start a new interval with rapid shuffling (100ms)
+    // Start a new interval with rapid shuffling (30ms)
     shuffleIntervalRef.current = setInterval(() => {
       setCurrentCardIndex((prevIndex) => {
         // Get a random index that's different from the current one
@@ -59,7 +77,7 @@ export default function CardShuffler() {
 
         return newIndex
       })
-    }, 30) // Fast shuffling (10 cards per second)
+    }, 30) // Fast shuffling (30+ cards per second)
   }
 
   const stopShuffling = () => {
@@ -74,24 +92,49 @@ export default function CardShuffler() {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="mb-6 flex gap-4">
-        <Button
-          onClick={startShuffling}
-          disabled={isShuffling || cards.length < 2}
-          variant="default"
-          size="lg"
-          className="min-w-[150px] bg-[#e8e59b] text-black hover:bg-[#e8e59b]/90"
-        >
-          Start Shuffling
-        </Button>
-        <Button onClick={stopShuffling} disabled={!isShuffling} variant="secondary" size="lg" className="bg-[#e8e59b] min-w-[150px] text-black hover:bg-[#e8e59b]/90">
-          Stop Shuffling
-        </Button>
+      <div className="w-full max-w-md flex justify-between items-center mb-6">
+        <div className="flex gap-4">
+          <Button
+            onClick={startShuffling}
+            disabled={isShuffling || cards.length < 2 || isLoading}
+            variant="default"
+            size="lg"
+            className="min-w-[150px] bg-[#e8e59b] text-black hover:bg-[#e8e59b]/90"
+          >
+            Start Shuffling
+          </Button>
+          <Button 
+            onClick={stopShuffling} 
+            disabled={!isShuffling} 
+            variant="secondary" 
+            size="lg" 
+            className="bg-[#e8e59b] min-w-[150px] text-black hover:bg-[#e8e59b]/90"
+          >
+            Stop Shuffling
+          </Button>
+        </div>
       </div>
 
-      {cards.length === 0 ? (
-        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-2xl">
+      {isLoading ? (
+        <div className="w-full max-w-md h-[400px] flex justify-center items-center border rounded-lg border-dashed">
+          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        </div>
+      ) : error ? (
+        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
+          <p className="text-red-500 mb-2">{error}</p>
+          <Button onClick={loadCards} variant="outline" size="sm">
+            Try Again
+          </Button>
+        </div>
+      ) : cards.length === 0 ? (
+        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
           <h2 className="text-xl font-semibold mb-2">No Cards Available</h2>
+          <p className="text-muted-foreground mb-4">
+            Add some cards to start shuffling!
+          </p>
+          <Link href="/manage">
+            <Button>Manage Cards</Button>
+          </Link>
         </div>
       ) : (
         <div
