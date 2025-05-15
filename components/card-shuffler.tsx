@@ -129,12 +129,6 @@ export default function CardShuffler() {
       ) : cards.length === 0 ? (
         <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
           <h2 className="text-xl font-semibold mb-2">No Cards Available</h2>
-          <p className="text-muted-foreground mb-4">
-            Add some cards to start shuffling!
-          </p>
-          <Link href="/manage">
-            <Button>Manage Cards</Button>
-          </Link>
         </div>
       ) : (
         <div
