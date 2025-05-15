@@ -6,7 +6,6 @@ import { ExternalLink, Loader2 } from "lucide-react"
 import type { CardImage } from "@/lib/types"
 import { getCards } from "@/lib/storage"
 import Image from "next/image"
-import Link from "next/link"
 
 export default function CardShuffler() {
   const [cards, setCards] = useState<CardImage[]>([])

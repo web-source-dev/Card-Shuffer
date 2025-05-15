@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Trash2, ArrowLeft, ImagePlus, LinkIcon, Type, Edit, X, Check, AlertCircle, Loader2 } from "lucide-react"
+import { Trash2, ImagePlus, LinkIcon, Type, Edit, X, Check, AlertCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -347,10 +347,6 @@ export default function ManagePage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Manage Cards</h1>
-        <Button onClick={() => (window.location.href = "/")} variant="outline" className="flex items-center gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Shuffler
-        </Button>
       </div>
 
       {apiError && (
