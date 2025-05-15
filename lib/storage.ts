@@ -1,4 +1,4 @@
-import { type CardImage } from "./types"
+import { type CardImage, type CachedData, STORAGE_KEY, CACHE_VERSION, CACHE_EXPIRY } from "./types"
 
 // Base URL for the API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -47,22 +47,96 @@ export const compressImage = async (dataUrl: string, quality = 0.7, maxWidth = 8
   })
 }
 
-// Get all cards from the API
-export const getCards = async (): Promise<CardImage[]> => {
+// Local storage cache management
+const saveToCache = <T>(key: string, data: T): void => {
   try {
-    const response = await fetch(`${API_BASE_URL}/cards`);
+    const cacheItem: CachedData<T> = {
+      data,
+      timestamp: Date.now(),
+      version: CACHE_VERSION
+    };
+    localStorage.setItem(key, JSON.stringify(cacheItem));
+  } catch (error) {
+    console.warn("Failed to save to cache:", error);
+  }
+};
+
+const getFromCache = <T>(key: string): T | null => {
+  try {
+    const cachedItem = localStorage.getItem(key);
+    if (!cachedItem) return null;
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch cards: ${response.status}`);
+    const parsed = JSON.parse(cachedItem) as CachedData<T>;
+    
+    // Check if cache is valid (not expired and matches current version)
+    if (
+      parsed.version === CACHE_VERSION && 
+      Date.now() - parsed.timestamp < CACHE_EXPIRY
+    ) {
+      return parsed.data;
     }
     
-    const cards = await response.json();
-    return cards;
+    return null;
   } catch (error) {
-    console.error("Error loading cards from API:", error);
+    console.warn("Failed to retrieve from cache:", error);
+    return null;
+  }
+};
+
+// Get all cards - check cache first, then API
+export const getCards = async (): Promise<CardImage[]> => {
+  try {
+    // First try to get data from cache
+    const cachedCards = getFromCache<CardImage[]>(STORAGE_KEY);
+    if (cachedCards && cachedCards.length > 0) {
+      console.log("Using cached cards data");
+      
+      // Fetch from API in background to update cache for next time
+      fetchAndUpdateCache().catch(err => 
+        console.warn("Background cache refresh failed:", err)
+      );
+      
+      return cachedCards;
+    }
+    
+    // If no cache or expired, fetch from API
+    return await fetchAndUpdateCache();
+  } catch (error) {
+    console.error("Error loading cards:", error);
     return [];
   }
-}
+};
+
+// Helper function to fetch from API and update cache
+const fetchAndUpdateCache = async (): Promise<CardImage[]> => {
+  const response = await fetch(`${API_BASE_URL}/cards`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cards: ${response.status}`);
+  }
+  
+  const cards = await response.json();
+  
+  // Update cache with fresh data
+  saveToCache(STORAGE_KEY, cards);
+  
+  // Prefetch and cache images in background
+  setTimeout(() => {
+    cards.forEach((card: CardImage) => {
+      if (card.imageUrl && !card.imageUrl.startsWith('data:')) {
+        prefetchImage(card.imageUrl);
+      }
+    });
+  }, 0);
+  
+  return cards;
+};
+
+// Prefetch images to browser cache
+const prefetchImage = (url: string): void => {
+  const img = new Image();
+  img.src = url;
+};
 
 // Add a new card with compression
 export const addCard = async (card: Omit<CardImage, "id" | "createdAt">): Promise<CardImage[] | null> => {
@@ -88,8 +162,9 @@ export const addCard = async (card: Omit<CardImage, "id" | "createdAt">): Promis
       throw new Error(`Failed to add card: ${response.status}`);
     }
 
-    // Return updated list of cards
-    return getCards();
+    // Get updated cards and update cache
+    const updatedCards = await fetchAndUpdateCache();
+    return updatedCards;
   } catch (error) {
     console.error("Error adding card:", error);
     return null;
@@ -126,8 +201,9 @@ export const updateCard = async (
       throw new Error(`Failed to update card: ${response.status}`);
     }
 
-    // Return updated list of cards
-    return getCards();
+    // Return updated list of cards and update cache
+    const updatedCards = await fetchAndUpdateCache();
+    return updatedCards;
   } catch (error) {
     console.error("Error updating card:", error);
     return null;
@@ -150,8 +226,9 @@ export const deleteCard = async (id: string): Promise<CardImage[] | null> => {
       throw new Error(`Failed to delete card: ${response.status}`);
     }
 
-    // Return updated list of cards
-    return getCards();
+    // Return updated list of cards and update cache
+    const updatedCards = await fetchAndUpdateCache();
+    return updatedCards;
   } catch (error) {
     console.error("Error deleting card:", error);
     return null;
@@ -169,9 +246,17 @@ export const clearAllCards = async (): Promise<boolean> => {
       throw new Error(`Failed to clear cards: ${response.status}`);
     }
 
+    // Clear the cache
+    localStorage.removeItem(STORAGE_KEY);
+    
     return true;
   } catch (error) {
     console.error("Error clearing cards:", error);
     return false;
   }
 }
+
+// Clear the cache manually if needed
+export const clearCache = (): void => {
+  localStorage.removeItem(STORAGE_KEY);
+};

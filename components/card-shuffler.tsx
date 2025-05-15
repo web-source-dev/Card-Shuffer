@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ExternalLink, Loader2 } from "lucide-react"
 import type { CardImage } from "@/lib/types"
 import { getCards } from "@/lib/storage"
-import Image from "next/image"
+import NextImage from "next/image"
 
 export default function CardShuffler() {
   const [cards, setCards] = useState<CardImage[]>([])
@@ -16,9 +16,10 @@ export default function CardShuffler() {
   const [error, setError] = useState<string | null>(null)
   const shuffleIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const shuffleHistoryRef = useRef<number[]>([])
+  const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    // Load cards from API
+    // Load cards from cache/API
     loadCards()
 
     // Cleanup on unmount
@@ -28,6 +29,30 @@ export default function CardShuffler() {
       }
     }
   }, [])
+
+  // Preload images when cards change
+  useEffect(() => {
+    if (cards.length > 0) {
+      const newImagesLoaded: Record<string, boolean> = {};
+      
+      // Track loading state for each image
+      cards.forEach(card => {
+        if (!card.imageUrl) return;
+        
+        const img = new globalThis.Image();
+        img.onload = () => {
+          setImagesLoaded(prev => ({
+            ...prev,
+            [card._id]: true
+          }));
+        };
+        img.src = card.imageUrl;
+        newImagesLoaded[card._id] = false;
+      });
+      
+      setImagesLoaded(newImagesLoaded);
+    }
+  }, [cards]);
 
   const loadCards = async () => {
     setIsLoading(true)
@@ -39,11 +64,11 @@ export default function CardShuffler() {
       
       if (loadedCards.length > 0) {
         setCurrentCardIndex(0)
+        setIsLoading(false) // Set loading to false after we have cards from cache
       }
     } catch (error) {
       console.error("Error loading cards:", error)
       setError("Failed to load cards. Please try again later.")
-    } finally {
       setIsLoading(false)
     }
   }
@@ -114,7 +139,7 @@ export default function CardShuffler() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && cards.length === 0 ? (
         <div className="w-full max-w-md h-[400px] flex justify-center items-center border rounded-lg border-dashed">
           <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
         </div>
@@ -137,16 +162,25 @@ export default function CardShuffler() {
         >
           {currentCard ? (
             <>
-              <a href={currentCard.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-                <Image
+              <a href={currentCard.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative">
+                {!imagesLoaded[currentCard._id] && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  </div>
+                )}
+                <NextImage
                   src={currentCard.imageUrl || "/placeholder.svg"}
                   alt={currentCard.name}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    imagesLoaded[currentCard._id] ? 'opacity-100' : 'opacity-0'
+                  }`}
                   onError={(e) => {
                     ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=600&width=400"
                   }}
                   width={300}
                   height={500}
+                  priority={true}
+                  loading="eager"
                 />
               </a>
 
