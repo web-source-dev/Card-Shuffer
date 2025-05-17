@@ -16,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-black-0">
           {/* This invisible component keeps the backend alive */}
           <KeepAlive />
           

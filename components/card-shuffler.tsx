@@ -167,7 +167,7 @@ export default function CardShuffler() {
           )}
         </div>
       )}
-            <div className="w-full max-w-md flex justify-between items-center mt-6">
+            <div className="w-full max-w-md flex bg-transparent justify-between items-center mt-6">
         <div className="flex justify-center items-center w-full gap-4">
           <Button
             onClick={startShuffling}
