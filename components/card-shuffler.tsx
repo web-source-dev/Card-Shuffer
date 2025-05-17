@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import type { CardImage } from "@/lib/types"
 import { getCards } from "@/lib/storage"
 import NextImage from "next/image"
@@ -11,7 +11,6 @@ export default function CardShuffler() {
   const [cards, setCards] = useState<CardImage[]>([])
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
   const [isShuffling, setIsShuffling] = useState(false)
-  const [showLink, setShowLink] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const shuffleIntervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -79,7 +78,6 @@ export default function CardShuffler() {
     }
 
     setIsShuffling(true)
-    setShowLink(false)
     shuffleHistoryRef.current = [currentCardIndex]
 
     // Clear any existing interval
@@ -116,8 +114,60 @@ export default function CardShuffler() {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="w-full max-w-md flex justify-between items-center mb-6">
-        <div className="flex gap-4">
+
+
+      {isLoading && cards.length === 0 ? (
+        <div className="w-full max-w-md h-[400px] flex justify-center items-center border rounded-lg border-dashed">
+          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        </div>
+      ) : error ? (
+        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
+          <p className="text-red-500 mb-2">{error}</p>
+          <Button onClick={loadCards} variant="outline" size="sm">
+            Try Again
+          </Button>
+        </div>
+      ) : cards.length === 0 ? (
+        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
+          <h2 className="text-xl font-semibold mb-2">No Cards Available</h2>
+        </div>
+      ) : (
+        <div
+          className="relative bg-transparent w-full max-w-md h-full aspect-[3/4] rounded-lg overflow-hidden border-0 shadow-0"
+        >
+          {currentCard ? (
+            <>
+              <a href={currentCard.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative">
+                {!imagesLoaded[currentCard._id] && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-transparent">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                  </div>
+                )}
+                <NextImage
+                  src={currentCard.imageUrl || "/placeholder.svg"}
+                  alt={currentCard.name}
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    imagesLoaded[currentCard._id] ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=600&width=400"
+                  }}
+                  width={300}
+                  height={500}
+                  priority={true}
+                  loading="eager"
+                />
+              </a>
+            </>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-transparent">
+              <p>No image available</p>
+            </div>
+          )}
+        </div>
+      )}
+            <div className="w-full max-w-md flex justify-between items-center mt-6">
+        <div className="flex justify-center items-center w-full gap-4">
           <Button
             onClick={startShuffling}
             disabled={isShuffling || cards.length < 2 || isLoading}
@@ -138,66 +188,6 @@ export default function CardShuffler() {
           </Button>
         </div>
       </div>
-
-      {isLoading && cards.length === 0 ? (
-        <div className="w-full max-w-md h-[400px] flex justify-center items-center border rounded-lg border-dashed">
-          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-        </div>
-      ) : error ? (
-        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
-          <p className="text-red-500 mb-2">{error}</p>
-          <Button onClick={loadCards} variant="outline" size="sm">
-            Try Again
-          </Button>
-        </div>
-      ) : cards.length === 0 ? (
-        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
-          <h2 className="text-xl font-semibold mb-2">No Cards Available</h2>
-        </div>
-      ) : (
-        <div
-          className="relative w-full max-w-md h-full aspect-[3/4] rounded-lg overflow-hidden border-0 shadow-0"
-          onMouseEnter={() => !isShuffling && setShowLink(true)}
-          onMouseLeave={() => setShowLink(false)}
-        >
-          {currentCard ? (
-            <>
-              <a href={currentCard.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative">
-                {!imagesLoaded[currentCard._id] && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                  </div>
-                )}
-                <NextImage
-                  src={currentCard.imageUrl || "/placeholder.svg"}
-                  alt={currentCard.name}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${
-                    imagesLoaded[currentCard._id] ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=600&width=400"
-                  }}
-                  width={300}
-                  height={500}
-                  priority={true}
-                  loading="eager"
-                />
-              </a>
-
-              {showLink && !isShuffling && (
-                <div className="absolute bottom-0 left-0 p-2 bg-black/70 text-white rounded-tr-md flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  <button onClick={() => window.open(currentCard.link, "_blank")}>Open</button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted">
-              <p>No image available</p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }
