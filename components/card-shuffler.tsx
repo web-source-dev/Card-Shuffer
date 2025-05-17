@@ -113,7 +113,7 @@ export default function CardShuffler() {
   const currentCard = cards[currentCardIndex]
 
   return (
-    <div className="flex flex-col items-center bg-transparent">
+    <div className="flex flex-col items-center bg-black-0">
 
 
       {isLoading && cards.length === 0 ? (
