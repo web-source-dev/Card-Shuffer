@@ -3,8 +3,8 @@ import './globals.css'
 import KeepAlive from "@/components/keep-alive"
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Card Shuffler',
+  description: 'A simple card shuffler application',
   generator: 'v0.dev',
 }
 
