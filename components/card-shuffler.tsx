@@ -113,22 +113,22 @@ export default function CardShuffler() {
   const currentCard = cards[currentCardIndex]
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center bg-transparent">
 
 
       {isLoading && cards.length === 0 ? (
-        <div className="w-full max-w-md h-[400px] flex justify-center items-center border rounded-lg border-dashed">
+        <div className="w-full max-w-md h-[400px] flex justify-center items-center border rounded-lg border-dashed bg-transparent">
           <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
         </div>
       ) : error ? (
-        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
+        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md bg-transparent">
           <p className="text-red-500 mb-2">{error}</p>
           <Button onClick={loadCards} variant="outline" size="sm">
             Try Again
           </Button>
         </div>
       ) : cards.length === 0 ? (
-        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md">
+        <div className="text-center p-12 border rounded-lg border-dashed w-full max-w-md bg-transparent">
           <h2 className="text-xl font-semibold mb-2">No Cards Available</h2>
         </div>
       ) : (
@@ -137,7 +137,7 @@ export default function CardShuffler() {
         >
           {currentCard ? (
             <>
-              <a href={currentCard.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative">
+              <a href={currentCard.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative bg-transparent">
                 {!imagesLoaded[currentCard._id] && (
                   <div className="absolute inset-0 flex items-center justify-center bg-transparent">
                     <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -146,7 +146,7 @@ export default function CardShuffler() {
                 <NextImage
                   src={currentCard.imageUrl || "/placeholder.svg"}
                   alt={currentCard.name}
-                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                  className={`w-full h-full object-cover transition-opacity bg-transparent duration-300 ${
                     imagesLoaded[currentCard._id] ? 'opacity-100' : 'opacity-0'
                   }`}
                   onError={(e) => {
@@ -156,6 +156,7 @@ export default function CardShuffler() {
                   height={500}
                   priority={true}
                   loading="eager"
+                  style={{ backgroundColor: 'transparent' }}
                 />
               </a>
             </>
