@@ -133,9 +133,9 @@ export default function CardShuffler() {
         </div>
       ) : (
         <div
-          className="relative bg-transparent w-full max-w-md h-full aspect-[3/4] rounded-lg overflow-hidden border-0 shadow-0"
-          style={{ backgroundColor: 'transparent' }}
-        >
+  className="relative bg-transparent rounded-lg overflow-hidden border-0 shadow-0"
+  style={{ width: '505px', height: '708px', backgroundColor: 'transparent' }}
+>
           {currentCard ? (
             <>
               <a href={currentCard.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full relative bg-transparent">
