@@ -33,11 +33,11 @@ export default function CardShuffler() {
   useEffect(() => {
     if (cards.length > 0) {
       const newImagesLoaded: Record<string, boolean> = {};
-      
+
       // Track loading state for each image
       cards.forEach(card => {
         if (!card.imageUrl) return;
-        
+
         const img = new globalThis.Image();
         img.onload = () => {
           setImagesLoaded(prev => ({
@@ -48,7 +48,7 @@ export default function CardShuffler() {
         img.src = card.imageUrl;
         newImagesLoaded[card._id] = false;
       });
-      
+
       setImagesLoaded(newImagesLoaded);
     }
   }, [cards]);
@@ -56,11 +56,11 @@ export default function CardShuffler() {
   const loadCards = async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const loadedCards = await getCards()
       setCards(loadedCards)
-      
+
       if (loadedCards.length > 0) {
         setCurrentCardIndex(0)
         setIsLoading(false) // Set loading to false after we have cards from cache
@@ -147,17 +147,16 @@ export default function CardShuffler() {
                 <NextImage
                   src={currentCard.imageUrl || "/placeholder.svg"}
                   alt={currentCard.name}
-                  className={`w-full h-full object-cover transition-opacity bg-transparent duration-300 ${
-                    imagesLoaded[currentCard._id] ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=600&width=400"
-                  }}
-                  width={300}
-                  height={500}
+                  className={`w-full h-full object-cover transition-opacity bg-transparent duration-300 ${imagesLoaded[currentCard._id] ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  width={505}
+                  height={708}
                   priority={true}
                   loading="eager"
                   style={{ backgroundColor: 'transparent' }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/placeholder.svg?height=708&width=505"
+                  }}
                 />
               </a>
             </>
@@ -168,27 +167,27 @@ export default function CardShuffler() {
           )}
         </div>
       )}
-            <div className="w-full max-w-md flex bg-transparent justify-between items-center mt-6" style={{ backgroundColor: 'transparent' }}>
+      <div className="w-full max-w-md flex bg-transparent justify-between items-center mt-6" style={{ backgroundColor: 'transparent' }}>
         <div className="flex justify-center items-center w-full gap-4 bg-transparent" style={{ backgroundColor: 'transparent' }}>
-        <Button
-  onClick={startShuffling}
-  disabled={isShuffling || cards.length < 2 || isLoading}
-  variant="default"
-  size="lg"
-  className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[16px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
->
-  Start Shuffling
-</Button>
+          <Button
+            onClick={startShuffling}
+            disabled={isShuffling || cards.length < 2 || isLoading}
+            variant="default"
+            size="lg"
+            className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[16px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
+          >
+            Start Shuffling
+          </Button>
 
-<Button
-  onClick={stopShuffling}
-  disabled={!isShuffling}
-  variant="secondary"
-  size="lg"
-  className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[16px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
->
-  Stop Shuffling
-</Button>
+          <Button
+            onClick={stopShuffling}
+            disabled={!isShuffling}
+            variant="secondary"
+            size="lg"
+            className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[16px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
+          >
+            Stop Shuffling
+          </Button>
 
         </div>
       </div>
