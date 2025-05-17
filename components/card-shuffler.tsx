@@ -170,24 +170,26 @@ export default function CardShuffler() {
       )}
             <div className="w-full max-w-md flex bg-transparent justify-between items-center mt-6" style={{ backgroundColor: 'transparent' }}>
         <div className="flex justify-center items-center w-full gap-4 bg-transparent" style={{ backgroundColor: 'transparent' }}>
-          <Button
-            onClick={startShuffling}
-            disabled={isShuffling || cards.length < 2 || isLoading}
-            variant="default"
-            size="lg"
-            className="min-w-[150px] bg-[#e8e59b] text-black hover:bg-[#e8e59b]/90"
-          >
-            Start Shuffling
-          </Button>
-          <Button 
-            onClick={stopShuffling} 
-            disabled={!isShuffling} 
-            variant="secondary" 
-            size="lg" 
-            className="bg-[#e8e59b] min-w-[150px] text-black hover:bg-[#e8e59b]/90"
-          >
-            Stop Shuffling
-          </Button>
+        <Button
+  onClick={startShuffling}
+  disabled={isShuffling || cards.length < 2 || isLoading}
+  variant="default"
+  size="lg"
+  className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[16px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
+>
+  Start Shuffling
+</Button>
+
+<Button
+  onClick={stopShuffling}
+  disabled={!isShuffling}
+  variant="secondary"
+  size="lg"
+  className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[16px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
+>
+  Stop Shuffling
+</Button>
+
         </div>
       </div>
     </div>
