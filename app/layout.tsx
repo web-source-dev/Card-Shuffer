@@ -5,7 +5,7 @@ import KeepAlive from "@/components/keep-alive"
 export const metadata: Metadata = {
   title: 'Card Shuffler',
   description: 'A simple card shuffler application',
-  generator: 'v0.dev',
+  generator: 'Card Shuffler',
 }
 
 export default function RootLayout({
