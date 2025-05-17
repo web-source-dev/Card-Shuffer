@@ -15,8 +15,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <div className="min-h-screen bg-black-0">
+      <body style={{ backgroundColor: 'transparent', background: 'transparent' }}>
+        <div className="min-h-screen bg-transparent" style={{ backgroundColor: 'transparent' }}>
           {/* This invisible component keeps the backend alive */}
           <KeepAlive />
           

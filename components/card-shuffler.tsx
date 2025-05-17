@@ -113,7 +113,7 @@ export default function CardShuffler() {
   const currentCard = cards[currentCardIndex]
 
   return (
-    <div className="flex flex-col items-center bg-black-0">
+    <div className="flex flex-col items-center bg-transparent" style={{ backgroundColor: 'transparent' }}>
 
 
       {isLoading && cards.length === 0 ? (
@@ -134,6 +134,7 @@ export default function CardShuffler() {
       ) : (
         <div
           className="relative bg-transparent w-full max-w-md h-full aspect-[3/4] rounded-lg overflow-hidden border-0 shadow-0"
+          style={{ backgroundColor: 'transparent' }}
         >
           {currentCard ? (
             <>
@@ -167,8 +168,8 @@ export default function CardShuffler() {
           )}
         </div>
       )}
-            <div className="w-full max-w-md flex bg-transparent justify-between items-center mt-6">
-        <div className="flex justify-center items-center w-full gap-4">
+            <div className="w-full max-w-md flex bg-transparent justify-between items-center mt-6" style={{ backgroundColor: 'transparent' }}>
+        <div className="flex justify-center items-center w-full gap-4 bg-transparent" style={{ backgroundColor: 'transparent' }}>
           <Button
             onClick={startShuffling}
             disabled={isShuffling || cards.length < 2 || isLoading}
