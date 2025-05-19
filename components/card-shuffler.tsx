@@ -16,6 +16,23 @@ export default function CardShuffler() {
   const shuffleIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const shuffleHistoryRef = useRef<number[]>([])
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({})
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    // Check if we're on mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    // Initial check
+    checkMobile()
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobile)
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     // Load cards from cache/API
@@ -134,7 +151,11 @@ export default function CardShuffler() {
       ) : (
         <div
   className="relative bg-transparent rounded-lg overflow-hidden border-0 shadow-0"
-  style={{ width: '505px', height: '708px', backgroundColor: 'transparent' }}
+  style={{ 
+    width: isMobile ? '280px' : '505px', 
+    height: isMobile ? '393px' : '708px', 
+    backgroundColor: 'transparent'
+  }}
 >
           {currentCard ? (
             <>
@@ -149,8 +170,8 @@ export default function CardShuffler() {
                   alt={currentCard.name}
                   className={`w-full h-full object-cover transition-opacity bg-transparent duration-300 ${imagesLoaded[currentCard._id] ? 'opacity-100' : 'opacity-0'
                     }`}
-                  width={505}
-                  height={708}
+                  width={isMobile ? 280 : 505}
+                  height={isMobile ? 393 : 708}
                   priority={true}
                   loading="eager"
                   style={{ backgroundColor: 'transparent' }}
@@ -168,13 +189,20 @@ export default function CardShuffler() {
         </div>
       )}
       <div className="w-full max-w-md flex bg-transparent justify-between items-center mt-6" style={{ backgroundColor: 'transparent' }}>
-        <div className="flex justify-center items-center w-full gap-4 bg-transparent" style={{ backgroundColor: 'transparent' }}>
+        <div className="flex justify-center items-center w-full gap-4 bg-transparent" style={{ 
+          backgroundColor: 'transparent',
+          gap: isMobile ? '8px' : '16px' 
+        }}>
           <Button
             onClick={startShuffling}
             disabled={isShuffling || cards.length < 2 || isLoading}
             variant="default"
-            size="lg"
-            className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[15px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
+            size={isMobile ? "sm" : "lg"}
+            className={`rounded-[33px] bg-[#BF9792] text-black font-[Times_New_Roman] hover:bg-[#E9DED9] ${
+              isMobile 
+                ? "min-w-[125px] text-[12px] py-1 px-2" 
+                : "min-w-[150px] text-[15px]"
+            }`}
           >
             Start Shuffling
           </Button>
