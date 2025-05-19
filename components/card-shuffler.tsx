@@ -99,7 +99,7 @@ export default function CardShuffler() {
 
         return newIndex
       })
-    }, 30) // Fast shuffling (30+ cards per second)
+    }, 50) // Fast shuffling (30+ cards per second)
   }
 
   const stopShuffling = () => {
@@ -184,7 +184,7 @@ export default function CardShuffler() {
             disabled={!isShuffling}
             variant="secondary"
             size="lg"
-            className="min-w-[150px] rounded-[33px] bg-[#BF9792] text-black text-[15px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
+            className="min-w-[150px] rounded-[33px] bg-[#E9DED9] text-black text-[15px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
           >
             Stop Shuffling
           </Button>
