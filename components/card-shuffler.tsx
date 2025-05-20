@@ -211,8 +211,12 @@ export default function CardShuffler() {
             onClick={stopShuffling}
             disabled={!isShuffling}
             variant="secondary"
-            size="lg"
-            className="min-w-[150px] rounded-[33px] bg-[#E9DED9] text-black text-[15px] font-[Times_New_Roman] hover:bg-[#E9DED9]"
+            size={isMobile ? "sm" : "lg"}
+            className={`rounded-[33px] bg-[#E9DED9] text-black font-[Times_New_Roman] hover:bg-[#E9DED9] ${
+              isMobile 
+                ? "min-w-[125px] text-[12px] py-1 px-2" 
+                : "min-w-[150px] text-[15px]"
+            }`}
           >
             Stop Shuffling
           </Button>
