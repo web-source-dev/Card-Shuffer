@@ -1,4 +1,4 @@
-import { type CardImage, type CachedData, STORAGE_KEY, CACHE_VERSION, CACHE_EXPIRY } from "./types"
+import { type CardImage, type CachedData, type Setting, type ShuffleSpeedSetting, STORAGE_KEY, SETTINGS_KEY, SHUFFLE_SPEED_KEY, CACHE_VERSION, CACHE_EXPIRY } from "./types"
 
 // Base URL for the API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -259,4 +259,77 @@ export const clearAllCards = async (): Promise<boolean> => {
 // Clear the cache manually if needed
 export const clearCache = (): void => {
   localStorage.removeItem(STORAGE_KEY);
+};
+
+// Get shuffle speed setting - check cache first, then API
+export const getShuffleSpeed = async (): Promise<number> => {
+  try {
+    // First try to get from cache
+    const cachedSettings = getFromCache<Record<string, any>>(SETTINGS_KEY);
+    if (cachedSettings && cachedSettings[SHUFFLE_SPEED_KEY] !== undefined) {
+      console.log("Using cached shuffle speed setting");
+      
+      // Fetch from API in background to update cache
+      fetchAndUpdateShuffleSetting().catch(err => 
+        console.warn("Background shuffle speed refresh failed:", err)
+      );
+      
+      return cachedSettings[SHUFFLE_SPEED_KEY];
+    }
+    
+    // If no cache or expired, fetch from API
+    return await fetchAndUpdateShuffleSetting();
+  } catch (error) {
+    console.error("Error loading shuffle speed:", error);
+    return 50; // Default value
+  }
+};
+
+// Helper function to fetch shuffle speed setting from API and update cache
+const fetchAndUpdateShuffleSetting = async (): Promise<number> => {
+  const response = await fetch(`${API_BASE_URL}/settings/${SHUFFLE_SPEED_KEY}`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch shuffle speed setting: ${response.status}`);
+  }
+  
+  const setting = await response.json() as ShuffleSpeedSetting;
+  const speed = setting.value;
+  
+  // Update cache with fresh data
+  const cachedSettings = getFromCache<Record<string, any>>(SETTINGS_KEY) || {};
+  cachedSettings[SHUFFLE_SPEED_KEY] = speed;
+  saveToCache(SETTINGS_KEY, cachedSettings);
+  
+  return speed;
+};
+
+// Save shuffle speed setting to API and cache
+export const saveShuffleSpeed = async (speed: number): Promise<boolean> => {
+  try {
+    // Ensure speed is within valid range
+    speed = Math.max(1, Math.min(100, speed));
+    
+    const response = await fetch(`${API_BASE_URL}/settings/${SHUFFLE_SPEED_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ value: speed }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to save shuffle speed: ${response.status}`);
+    }
+
+    // Update cache
+    const cachedSettings = getFromCache<Record<string, any>>(SETTINGS_KEY) || {};
+    cachedSettings[SHUFFLE_SPEED_KEY] = speed;
+    saveToCache(SETTINGS_KEY, cachedSettings);
+    
+    return true;
+  } catch (error) {
+    console.error("Error saving shuffle speed:", error);
+    return false;
+  }
 };

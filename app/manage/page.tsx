@@ -11,9 +11,20 @@ import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Slider } from "@/components/ui/slider"
 import type { CardImage } from "@/lib/types"
-import { getCards, addCard, deleteCard, updateCard, clearAllCards, compressImage } from "@/lib/storage"
+import { getCards, addCard, deleteCard, updateCard, clearAllCards, compressImage, getShuffleSpeed, saveShuffleSpeed } from "@/lib/storage"
 import Image from "next/image"
+
+// Convert speed value (1-100) to milliseconds for display
+const formatSpeedDisplay = (speed: number): string => {
+  // Same function as in card-shuffler.tsx to ensure consistency
+  const minInterval = 10;   // Fastest (10ms)
+  const maxInterval = 300;  // Slowest (300ms)
+  const interval = Math.round(maxInterval - ((speed - 1) * (maxInterval - minInterval) / 99));
+  
+  return `${interval}ms`;
+}
 
 export default function ManagePage() {
   const [cards, setCards] = useState<CardImage[]>([])
@@ -33,10 +44,118 @@ export default function ManagePage() {
   const editFileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
+  // Shuffle speed state
+  const [shuffleSpeed, setShuffleSpeed] = useState(50)
+  const [isLoadingSpeed, setIsLoadingSpeed] = useState(false)
+  const [isSavingSpeed, setIsSavingSpeed] = useState(false)
+  const [speedPreviewActive, setSpeedPreviewActive] = useState(false)
+  const speedPreviewIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [previewCardIndex, setPreviewCardIndex] = useState(0)
+
   useEffect(() => {
-    // Load cards from API
+    // Load cards from API and shuffle speed setting
     loadCards()
+    loadShuffleSpeed()
+
+    // Cleanup preview on unmount
+    return () => {
+      if (speedPreviewIntervalRef.current) {
+        clearInterval(speedPreviewIntervalRef.current)
+      }
+    }
   }, [])
+
+  // Start/stop preview when preview state changes
+  useEffect(() => {
+    if (speedPreviewActive) {
+      startSpeedPreview()
+    } else {
+      stopSpeedPreview()
+    }
+  }, [speedPreviewActive, shuffleSpeed])
+
+  const loadShuffleSpeed = async () => {
+    setIsLoadingSpeed(true)
+    try {
+      const speed = await getShuffleSpeed()
+      setShuffleSpeed(speed)
+    } catch (error) {
+      console.error("Error loading shuffle speed:", error)
+      toast({
+        title: "Error loading shuffle speed",
+        description: "Failed to load shuffle speed setting. Using default value.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingSpeed(false)
+    }
+  }
+
+  const handleSpeedChange = (value: number[]) => {
+    setShuffleSpeed(value[0])
+  }
+
+  const saveSpeed = async () => {
+    setIsSavingSpeed(true)
+    try {
+      const success = await saveShuffleSpeed(shuffleSpeed)
+      if (success) {
+        toast({
+          title: "Shuffle speed saved",
+          description: "Your shuffle speed setting has been saved successfully.",
+        })
+      } else {
+        throw new Error("Failed to save shuffle speed")
+      }
+    } catch (error) {
+      console.error("Error saving shuffle speed:", error)
+      toast({
+        title: "Error saving shuffle speed",
+        description: "Failed to save shuffle speed setting. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingSpeed(false)
+    }
+  }
+
+  const startSpeedPreview = () => {
+    // Clear any existing interval
+    if (speedPreviewIntervalRef.current) {
+      clearInterval(speedPreviewIntervalRef.current)
+    }
+
+    // Convert speed to interval (same as in card-shuffler.tsx)
+    const minInterval = 10;
+    const maxInterval = 300;
+    const interval = Math.round(maxInterval - ((shuffleSpeed - 1) * (maxInterval - minInterval) / 99));
+
+    // Start a new interval with the current speed
+    speedPreviewIntervalRef.current = setInterval(() => {
+      setPreviewCardIndex((prevIndex) => {
+        if (cards.length === 0) return 0;
+        
+        // Get a random index that's different from the current one
+        let newIndex;
+        do {
+          newIndex = Math.floor(Math.random() * cards.length)
+        } while (newIndex === prevIndex && cards.length > 1)
+        
+        return newIndex;
+      })
+    }, interval)
+  }
+
+  const stopSpeedPreview = () => {
+    if (speedPreviewIntervalRef.current) {
+      clearInterval(speedPreviewIntervalRef.current)
+      speedPreviewIntervalRef.current = null
+    }
+  }
+
+  const toggleSpeedPreview = () => {
+    setSpeedPreviewActive(prev => !prev)
+  }
 
   const loadCards = async () => {
     setIsLoadingCards(true)
@@ -343,6 +462,9 @@ export default function ManagePage() {
     }
   }
 
+  // Preview card based on current preview index
+  const previewCard = cards[previewCardIndex]
+
   return (
     <div className="container mx-auto px-4 py-8 bg-white">
       <div className="flex justify-between items-center mb-8">
@@ -356,7 +478,100 @@ export default function ManagePage() {
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Shuffle Speed Settings Card */}
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <path d="M5 12h14"></path>
+                <path d="M12 5v14"></path>
+              </svg>
+              Shuffle Speed Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="shuffle-speed">Shuffle Speed</Label>
+                  <span className="text-muted-foreground text-sm">
+                    {isLoadingSpeed ? "Loading..." : `${shuffleSpeed}% (${formatSpeedDisplay(shuffleSpeed)})`}
+                  </span>
+                </div>
+                <Slider
+                  id="shuffle-speed"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={[shuffleSpeed]}
+                  onValueChange={handleSpeedChange}
+                  disabled={isLoadingSpeed || isSavingSpeed}
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Slow</span>
+                  <span>Fast</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Button 
+                  onClick={toggleSpeedPreview} 
+                  variant={speedPreviewActive ? "destructive" : "outline"}
+                  disabled={cards.length < 2 || isLoadingCards}
+                >
+                  {speedPreviewActive ? "Stop Preview" : "Preview Speed"}
+                </Button>
+                <Button 
+                  onClick={saveSpeed} 
+                  disabled={isLoadingSpeed || isSavingSpeed}
+                >
+                  {isSavingSpeed ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    "Save Speed Setting"
+                  )}
+                </Button>
+              </div>
+            </div>
+            
+            {/* Speed Preview Card */}
+            {speedPreviewActive && (
+              <div className="mt-4 border rounded-lg p-2 overflow-hidden">
+                <h3 className="text-sm font-medium mb-2">Speed Preview</h3>
+                {cards.length < 2 ? (
+                  <p className="text-sm text-muted-foreground">Need at least 2 cards for preview</p>
+                ) : isLoadingCards ? (
+                  <div className="flex justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="relative aspect-video bg-muted rounded-md overflow-hidden">
+                    {previewCard ? (
+                      <Image
+                        src={previewCard.imageUrl || "/placeholder.svg"}
+                        alt={previewCard.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/placeholder.svg"
+                        }}
+                        width={300}
+                        height={200}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-sm text-muted-foreground">No preview available</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card className="shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -424,81 +639,81 @@ export default function ManagePage() {
             </Button>
           </CardFooter>
         </Card>
+      </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              Current Cards {isLoadingCards ? "" : `(${cards.length})`}
-            </h2>
-            {cards.length > 0 && !isLoadingCards && (
-              <Button variant="outline" size="sm" onClick={handleClearAllCards}>
-                Clear All
-              </Button>
-            )}
-          </div>
-
-          {isLoadingCards ? (
-            <div className="flex justify-center items-center p-12 border rounded-lg border-dashed">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : cards.length === 0 ? (
-            <div className="text-center p-8 border rounded-lg border-dashed">
-              <p className="text-muted-foreground">No cards added yet. Add your first card!</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto p-1">
-              {cards.map((card) => (
-                <Card key={card._id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                  <div className="relative aspect-video bg-muted">
-                    <Image
-                      src={card.imageUrl || "/placeholder.svg"}
-                      alt={card.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=200&width=300"
-                      }}
-                      width={200}
-                      height={300}
-                    />
-                  </div>
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium truncate">{card.name}</h3>
-                        <a
-                          href={card.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary truncate block hover:underline"
-                        >
-                          {card.link}
-                        </a>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="flex-shrink-0 h-8 w-8"
-                          onClick={() => openEditDialog(card)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="flex-shrink-0 h-8 w-8"
-                          onClick={() => handleDeleteCard(card._id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">
+            Current Cards {isLoadingCards ? "" : `(${cards.length})`}
+          </h2>
+          {cards.length > 0 && !isLoadingCards && (
+            <Button variant="outline" size="sm" onClick={handleClearAllCards}>
+              Clear All
+            </Button>
           )}
         </div>
+
+        {isLoadingCards ? (
+          <div className="flex justify-center items-center p-12 border rounded-lg border-dashed">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : cards.length === 0 ? (
+          <div className="text-center p-8 border rounded-lg border-dashed">
+            <p className="text-muted-foreground">No cards added yet. Add your first card!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto p-1">
+            {cards.map((card) => (
+              <Card key={card._id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <div className="relative aspect-video bg-muted">
+                  <Image
+                    src={card.imageUrl || "/placeholder.svg"}
+                    alt={card.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=200&width=300"
+                    }}
+                    width={200}
+                    height={300}
+                  />
+                </div>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{card.name}</h3>
+                      <a
+                        href={card.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary truncate block hover:underline"
+                      >
+                        {card.link}
+                      </a>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="flex-shrink-0 h-8 w-8"
+                        onClick={() => openEditDialog(card)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="flex-shrink-0 h-8 w-8"
+                        onClick={() => handleDeleteCard(card._id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Edit Card Dialog */}

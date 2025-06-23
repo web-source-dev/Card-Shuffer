@@ -4,8 +4,19 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import type { CardImage } from "@/lib/types"
-import { getCards } from "@/lib/storage"
+import { getCards, getShuffleSpeed } from "@/lib/storage"
 import NextImage from "next/image"
+
+// Convert speed value (1-100) to interval in milliseconds (lower interval = faster)
+// Speed 1 => 300ms (slowest)
+// Speed 100 => 10ms (fastest)
+const speedToInterval = (speed: number): number => {
+  const minInterval = 10;   // Fastest (10ms)
+  const maxInterval = 300;  // Slowest (300ms)
+  
+  // Invert the scale since higher speed should be lower interval
+  return Math.round(maxInterval - ((speed - 1) * (maxInterval - minInterval) / 99));
+}
 
 export default function CardShuffler() {
   const [cards, setCards] = useState<CardImage[]>([])
@@ -17,6 +28,8 @@ export default function CardShuffler() {
   const shuffleHistoryRef = useRef<number[]>([])
   const [imagesLoaded, setImagesLoaded] = useState<Record<string, boolean>>({})
   const [isMobile, setIsMobile] = useState(false)
+  const [shuffleSpeed, setShuffleSpeed] = useState(50) // Default speed
+  const shuffleIntervalTime = useRef(speedToInterval(50)) // Default interval
 
   useEffect(() => {
     // Check if we're on mobile
@@ -35,8 +48,9 @@ export default function CardShuffler() {
   }, [])
 
   useEffect(() => {
-    // Load cards from cache/API
+    // Load cards from cache/API and shuffle speed setting
     loadCards()
+    loadShuffleSpeed()
 
     // Cleanup on unmount
     return () => {
@@ -45,6 +59,17 @@ export default function CardShuffler() {
       }
     }
   }, [])
+
+  // Update interval time when shuffle speed changes
+  useEffect(() => {
+    shuffleIntervalTime.current = speedToInterval(shuffleSpeed)
+    
+    // If we're currently shuffling, restart with the new speed
+    if (isShuffling && shuffleIntervalRef.current) {
+      clearInterval(shuffleIntervalRef.current)
+      startShufflingWithCurrentSpeed()
+    }
+  }, [shuffleSpeed, isShuffling])
 
   // Preload images when cards change
   useEffect(() => {
@@ -70,6 +95,17 @@ export default function CardShuffler() {
     }
   }, [cards]);
 
+  const loadShuffleSpeed = async () => {
+    try {
+      const speed = await getShuffleSpeed()
+      setShuffleSpeed(speed)
+      shuffleIntervalTime.current = speedToInterval(speed)
+    } catch (error) {
+      console.error("Error loading shuffle speed:", error)
+      // Continue with default speed if there's an error
+    }
+  }
+
   const loadCards = async () => {
     setIsLoading(true)
     setError(null)
@@ -89,20 +125,11 @@ export default function CardShuffler() {
     }
   }
 
-  const startShuffling = () => {
-    if (cards.length < 2) {
-      return // Need at least 2 cards to shuffle
-    }
-
+  const startShufflingWithCurrentSpeed = () => {
     setIsShuffling(true)
     shuffleHistoryRef.current = [currentCardIndex]
 
-    // Clear any existing interval
-    if (shuffleIntervalRef.current) {
-      clearInterval(shuffleIntervalRef.current)
-    }
-
-    // Start a new interval with rapid shuffling (30ms)
+    // Start a new interval with the current shuffle speed
     shuffleIntervalRef.current = setInterval(() => {
       setCurrentCardIndex((prevIndex) => {
         // Get a random index that's different from the current one
@@ -116,7 +143,20 @@ export default function CardShuffler() {
 
         return newIndex
       })
-    }, 50) // Fast shuffling (30+ cards per second)
+    }, shuffleIntervalTime.current)
+  }
+
+  const startShuffling = () => {
+    if (cards.length < 2) {
+      return // Need at least 2 cards to shuffle
+    }
+
+    // Clear any existing interval
+    if (shuffleIntervalRef.current) {
+      clearInterval(shuffleIntervalRef.current)
+    }
+
+    startShufflingWithCurrentSpeed()
   }
 
   const stopShuffling = () => {
