@@ -1,4 +1,4 @@
-import { type CardImage, type CachedData, type Setting, type ShuffleSpeedSetting, STORAGE_KEY, SETTINGS_KEY, SHUFFLE_SPEED_KEY, CACHE_VERSION, CACHE_EXPIRY } from "./types"
+import { type CardImage, type CachedData, type ShuffleSpeedSetting, STORAGE_KEY, SETTINGS_KEY, SHUFFLE_SPEED_KEY, CACHE_VERSION, CACHE_EXPIRY } from "./types"
 
 // Base URL for the API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -265,7 +265,7 @@ export const clearCache = (): void => {
 export const getShuffleSpeed = async (): Promise<number> => {
   try {
     // First try to get from cache
-    const cachedSettings = getFromCache<Record<string, any>>(SETTINGS_KEY);
+    const cachedSettings = getFromCache<Record<string, number>>(SETTINGS_KEY);
     if (cachedSettings && cachedSettings[SHUFFLE_SPEED_KEY] !== undefined) {
       console.log("Using cached shuffle speed setting");
       
@@ -297,7 +297,7 @@ const fetchAndUpdateShuffleSetting = async (): Promise<number> => {
   const speed = setting.value;
   
   // Update cache with fresh data
-  const cachedSettings = getFromCache<Record<string, any>>(SETTINGS_KEY) || {};
+  const cachedSettings = getFromCache<Record<string, number>>(SETTINGS_KEY) || {};
   cachedSettings[SHUFFLE_SPEED_KEY] = speed;
   saveToCache(SETTINGS_KEY, cachedSettings);
   
@@ -323,7 +323,7 @@ export const saveShuffleSpeed = async (speed: number): Promise<boolean> => {
     }
 
     // Update cache
-    const cachedSettings = getFromCache<Record<string, any>>(SETTINGS_KEY) || {};
+    const cachedSettings = getFromCache<Record<string, number>>(SETTINGS_KEY) || {};
     cachedSettings[SHUFFLE_SPEED_KEY] = speed;
     saveToCache(SETTINGS_KEY, cachedSettings);
     

@@ -14,7 +14,7 @@ export interface CachedData<T> {
 
 export interface Setting {
   key: string;
-  value: any;
+  value: number;
   updatedAt?: number;
 }
 
